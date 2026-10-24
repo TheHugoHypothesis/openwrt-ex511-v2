@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+#include "ipq5018-tplink-ex511-v2.dts"
+
+/*
+ * Opt-in persistent root in physical slot 1. Stock bootipq selected
+ * through tp_boot_idx=1 passes ubi.mtd=rootfs_1 (observed over SSH/UART).
+ * The inherited root=/dev/ubiblock0_1 then refers to OpenWrt's rootfs volume.
+ * BOOTCONFIG selection is deliberately not used: its partition-name swapping
+ * is incompatible with this Linux fixed-partition layout.
+ */
+/ {
+	chosen {
+		openwrt,ex511-slot1-layout;
+	};
+};
+
+/* Only rootfs_1 at 0x36a0000 may be written, including its UBIFS overlay. */
+&ex511_partitions {
+	partition@100000 { read-only; };
+	partition@140000 { read-only; };
+	partition@300000 { read-only; };
+	partition@c40000 { read-only; };
+	partition@1240000 { read-only; };
+};

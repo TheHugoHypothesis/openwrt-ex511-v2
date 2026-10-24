@@ -1,9 +1,7 @@
-src-git packages https://git.openwrt.org/feed/packages.git
-src-git luci https://git.openwrt.org/project/luci.git
-src-git routing https://git.openwrt.org/feed/routing.git
-src-git telephony https://git.openwrt.org/feed/telephony.git
-src-git video https://github.com/openwrt/video.git
-src-git nss https://github.com/kuncy7/nss-packages.git;ipq50xx-rebase
-#src-git targets https://github.com/openwrt/targets.git
-#src-git oldpackages http://git.openwrt.org/packages.git
-#src-link custom /usr/src/openwrt/custom-feed
+# Pinned for the EX511 NSS/factory-data development build.
+src-git packages https://github.com/openwrt/packages.git^baba60db0012a2a1a5fe5a079d58fc49e1b518be
+src-git luci https://github.com/openwrt/luci.git^580b6b1d9ec3a79edb8e2a5a9c4700b9c320ff6a
+src-git routing https://github.com/openwrt/routing.git^4b9891b9136259f93294a424507ed24c5e8c1cbd
+src-git telephony https://github.com/openwrt/telephony.git^5d68d53c160a325ea9d03fce393e051573bcc736
+src-git video https://github.com/openwrt/video.git^6917907d4d6c670cf85be525d23216595655061d
+src-git nss https://github.com/kuncy7/nss-packages.git^5344fc35d79fc947b501e9feee5ced2b07c664fa

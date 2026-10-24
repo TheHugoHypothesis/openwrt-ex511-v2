@@ -78,6 +78,23 @@ ipq50xx_setup_macs()
 	local wan_mac=""
 
 	case $board in
+	tplink,ex511-v2)
+		. /lib/upgrade/nand.sh
+		. /lib/functions/ex511-v2.sh
+		label_mac=$(ex511_v2_get_factory_mac) || {
+			logger -t board.d "EX511 v2: read-only factory MAC extraction failed"
+			return
+		}
+		ucidef_set_interface_macaddr "lan" "$label_mac"
+		ucidef_set_interface_macaddr "wan" "$(macaddr_add "$label_mac" 1)"
+		ucidef_set_label_macaddr "$label_mac"
+		ucidef_set_network_device_mac "eth0" "$label_mac"
+		# Match either SoC node spelling; never depend on phy enumeration order.
+		ucidef_add_wlan platform/soc@0/c000000.wifi platform/soc/c000000.wifi \
+			macaddr_base="$label_mac"
+		ucidef_add_wlan platform/soc@0/b00a040.wifi platform/soc/b00a040.wifi \
+			macaddr_base="$(macaddr_add "$label_mac" 2)"
+		;;
 	avm,fritzbox-4050)
 		wan_mac=$(cat /proc/device-tree/chosen/macdsl)
 		lan_mac=$(cat /proc/device-tree/chosen/maca)
@@ -113,6 +130,10 @@ board_config_update
 board=$(board_name)
 ipq50xx_setup_interfaces $board
 ipq50xx_setup_macs $board
+if [ "$board" = "tplink,ex511-v2" ] &&
+	[ -e /proc/device-tree/chosen/openwrt,ex511-slot1-layout ]; then
+	ucidef_set_compat_version "2.0"
+fi
 board_config_flush
 
 exit 0

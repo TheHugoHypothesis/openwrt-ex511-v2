@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+#include "ipq5018-tplink-ex511-v2-slot1.dts"
+
+/* Explicit opt-in: permit the guarded SSH boot-policy tool, never automatic writes. */
+/ {
+	chosen {
+		openwrt,ex511-env-control;
+	};
+};
+
+/* One non-redundant 256 KiB environment within this 512 KiB partition. */
+&ex511_partitions {
+	partition@300000 { /delete-property/ read-only; };
+};

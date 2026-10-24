@@ -63,26 +63,7 @@
 		serial0 = &blsp1_uart1;
 		label-mac-device = <&gmac1>;
 
-		/*
-		 * Deliberately NO ethernet0 alias. Stock U-Boot 2016.01 runs
-		 * fdt_fixup_ethernet(), which walks /aliases for ethernet%d and
-		 * injects mac-address + local-mac-address into the aliased node
-		 * from its ethaddr environment variable. 0:APPSBLENV is 100%
-		 * erased, so U-Boot falls back to its compiled-in default and
-		 * hands Linux ethaddr=00:11:22:33:44:55 (visible in printenv, and
-		 * matching "eth0 MAC Address from ART is not valid" in the stock
-		 * boot log).
-		 *
-		 * of_get_mac_address() checks mac-address, then
-		 * local-mac-address, then address, and only then the nvmem
-		 * "mac-address" cell -- so an injected property silently beats
-		 * the hw_mac_addr cell on misc_data_ro and every interface comes
-		 * up as 00:11:22:33:44:55.
-		 *
-		 * Without the alias U-Boot has no node to fix up, gmac1 carries
-		 * no MAC property, and the nvmem cell is used. None of the other
-		 * 16 in-tree ipq5018 boards declare ethernet0 either.
-		 */
+		/* Factory MAC is applied in preinit; keep U-Boot MAC fixups disabled. */
 	};
 
 	chosen {
@@ -94,20 +75,11 @@
 		 * bootargs-append, which OpenWrt appends to whatever U-Boot passes
 		 * (920-device_tree_cmdline.patch), as every other ipq50xx board does.
 		 *
-		 * coherent_pool sizes the atomic DMA pools. Every other ipq50xx
-		 * board passes 2M, and this one did too, because the MPD firmware
-		 * loader (mdt_load_split_segment_dma) allocated its per-segment
-		 * bounce buffers with a bare GFP_DMA, which the DMA layer treats
-		 * as atomic: 268-374 KB segments came out of the pool and the Q6
-		 * failed -12 with anything smaller. Patch 0828 gives the loader
-		 * GFP_KERNEL; nothing else on the board draws on the pools
-		 * (ath11k, qca-nss-drv and the qcom platform drivers were
-		 * checked). 2M costs far more than it says: three pools (kernel,
-		 * DMA, DMA32) of 2 MiB each and the DMA one doubles itself on
-		 * first use -- 8 MiB measured in /sys/kernel/debug/dma_pools on
-		 * a 256 MiB board. 512K keeps a margin over the default; if
-		 * pool_size_dma reads 1048576 after boot something is still using
-		 * it, and a Q6 -12 at probe means 0828 is missing.
+		 * Retain the validated 512K atomic DMA pools on this 256 MiB board.
+		 * Earlier MPD loaders required a GFP_KERNEL correction (then patch
+		 * 0828) before reducing the old 2M setting; the current kernel uses
+		 * the newer remoteproc/MDT arrangement. Do not reintroduce that old
+		 * patch solely because its filename is absent.
 		 */
 		bootargs-append = " root=/dev/ubiblock0_1 swiotlb=1 coherent_pool=512K";
 	};
@@ -497,8 +469,6 @@
 
 	phy-mode = "sgmii";
 
-	nvmem-cells = <&hw_mac_addr 0>;
-	nvmem-cell-names = "mac-address";
 
 	fixed-link {
 		speed = <1000>;
@@ -528,10 +498,9 @@
  * vendor default and is not BR-specific.
  *
  * Cal data: ART partition all 0xFF on this unit (ISP-erased).
- * 11-ath11k-caldata writes the same zero-filled dummy stock ends up with;
- * the firmware falls back to internal defaults. Note the 5 GHz radio runs
- * on an identically zero-filled dummy and is fine, so blank cal is not by
- * itself a fault -- the board data is what matters.
+ * Preserve the tested baseline's integrated-radio zero-cal fallback. The
+ * corresponding factory UBIFS calibration record has not been validated.
+ * The external radio has a separate, validated factory-record path below.
  *
  * fw-memory-mode=2, as stock uses, NOT the 1 the other in-tree ipq5018
  * boards use -- see the note on &wifi1 below. Those boards have more DRAM
@@ -543,25 +512,7 @@
 	qcom,ath11k-calibration-variant = "TP-Link-EX511-v2";
 	qcom,ath11k-fw-memory-mode = <2>;
 
-	/*
-	 * ath11k reads a MAC via device_get_mac_address(), which falls back
-	 * to nvmem_get_mac_address(), so the same misc_data_ro cell that
-	 * feeds gmac1 can feed the radio.
-	 *
-	 * The usual qualcommax route -- ath11k_patch_mac() into caldata
-	 * extracted from 0:ART -- cannot work here: 0:ART is erased, our cal
-	 * file is a zero-filled dummy, and the firmware ignores a MAC patched
-	 * into it. The radio came up as 00:03:7f:12:65:65, a board-data
-	 * default that would be identical on every EX511.
-	 *
-	 * This works because ath11k's ab->pdevs_macaddr_valid is false on this
-	 * board, so the DT/nvmem address is used rather than a firmware-supplied
-	 * one. Verified on hardware: phy0 comes up as 30:68:93:3f:b3:60. Were
-	 * that flag ever true, the firmware MAC would win and the fallback is
-	 * macaddr on the wifi-iface in /etc/config/wireless.
-	 */
-	nvmem-cells = <&hw_mac_addr 0>;
-	nvmem-cell-names = "mac-address";
+	/* Userspace supplies macaddr_base from the validated factory record. */
 };
 
 /*
@@ -598,24 +549,13 @@
  * AHB path b00a040.wifi, protection domain q6_wcss_pd2. Settings below are
  * the ones the other in-tree QCN6122 boards use.
  *
- * Board data: QSDK reference blob /etc/IPQ5018/WIFI_FW/qcn6122/bdwlan.b50,
- * deliberately, NOT the stock per-board file. Stock would use
- * /etc/board_data_files/5g/bdwlan_BR10.b5g here (qcom,board_id=<0x60> is
- * symlinked to /tmp/board_data_files/5g/bdwlan.b5g, filled from
- * bdwlan_${country}${fem_mask_5g}.b5g; this unit is Country=BR,
- * FEM_MASK_5G=10) -- and BR10 was tried on 2026-09-11 and **breaks this
- * radio**:
+ * External board data must match the device factory country/FEM record.
+ * Import a matching BDF privately; the provisioning helper validates its
+ * marker and EEPROM checksums before exposing the RAM copy to ath11k.
  *
- *   ath11k b00a040.wifi: failed to perform regd update : -22
- *   ath11k b00a040.wifi: failed register the radio with mac80211: -22
- *   ath11k b00a040.wifi: failed to create pdev core: -22
- *
- * with a WARN in ath11k_regd_update(); phy1 never appears and the radio is
- * gone entirely. The regulatory data in that blob is something mainline
- * ath11k cannot reconcile. b50 is only ~4% different from BR10 and works, so
- * it stays until someone fixes the regd path. Contrast &wifi above, where the
- * equivalent 8.2% mismatch left the 2.4GHz receiver dead -- being close enough
- * to work is luck here, not design.
+ * External calibration comes from the read-only misc_ro UBIFS file
+ * 0x043A0000, after country/FEM, EEPROM header and checksum validation.
+ * It is not replaced by the baseline's zero-filled external dummy.
  *
  * Both radios run at fw-memory-mode 2, which is what stock uses and what this
  * board needs. Mode 1 is fine on the other in-tree ipq5018 boards, which carry
@@ -630,10 +570,8 @@
  * With one radio there was 62 MiB free, so the second costs ~46 MiB at mode 1.
  * Mode 2 is the knob stock reaches for on exactly this hardware.
  *
- * The MAC needs a word too. misc_data_ro holds exactly one address and &wifi
- * takes it at index 0, so this radio needs a different one. Stock's own boot
- * log on this unit assigns 2.4GHz 30:68:93:3f:b3:60 and 5GHz ...b3:62, so use
- * index 2 and leave base+1 alone as stock does.
+ * Userspace derives this radio's MAC allocation base from the validated
+ * factory MAC record plus 2; the Ethernet WAN allocation uses base plus 1.
  */
 &wifi1 {
 	status = "okay";
@@ -645,8 +583,6 @@
 	memory-region = <&q6_region_qcn6122_1>, <&q6_region_ipq5018>, <&m3_dump_qcn6122_1>;
 	memory-region-names = "q6-region", "m3-region", "m3-dump";
 
-	nvmem-cells = <&hw_mac_addr 2>;
-	nvmem-cell-names = "mac-address";
 };
 
 &blsp1_spi1 {
@@ -668,7 +604,7 @@
 		nand-ecc-engine = <&qpic_nand>;
 		nand-bus-width = <8>;
 
-		partitions {
+		ex511_partitions: partitions {
 			compatible = "fixed-partitions";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -686,23 +622,11 @@
 			};
 
 			/*
-			 * Writable on purpose, unlike every other bootloader
-			 * partition here. These two hold the QCA bootconfig
-			 * table that selects the active rootfs slot, and
-			 * sysupgrade has to flip primaryboot in both to install
-			 * into the inactive slot. Marked read-only they cannot
-			 * be opened for writing at all, and the upgrade aborts:
-			 *
-			 *   running from rootfs, upgrading into rootfs_1
-			 *   Could not open mtd device: /dev/mtd2
-			 *   Can't open device for writing!
-			 *   failed to write 0:BOOTCONFIG
-			 *
-			 * linksys,mx6200, whose A/B code this board reuses,
-			 * does not hit this because it takes its partitions
-			 * from qcom,smem-part, which sets no read-only flags.
-			 * Only 336 bytes at the start are ever touched; nothing
-			 * else lives in either partition.
+			 * Retain the legacy base layout for comparison. The protected
+			 * diagnostic and physical-slot-1 profiles override these flags.
+			 * The EX511 sysupgrade handler no longer writes BOOTCONFIG;
+			 * bootloader slot selection is handled separately through the
+			 * supported stock-SSH workflow.
 			 */
 			partition@100000 {
 				label = "0:BOOTCONFIG";
@@ -766,42 +690,7 @@
 				reg = <0x640000 0x600000>;
 				read-only;
 
-				/*
-				 * The unit's only MAC address, 6 raw bytes at
-				 * misc_data_ro + 0x113830 (absolute 0x753830 in
-				 * the NAND dump). It is the sole MAC on the whole
-				 * flash -- 0:ART is 100% erased, and a scan of all
-				 * 128 MiB for the 30:68:93 OUI finds exactly one
-				 * genuine record.
-				 *
-				 * CAVEAT, understand this before trusting it: this
-				 * partition is a UBI container holding a UBIFS
-				 * volume named "misc_ro" (stock does
-				 * `mount -t ubifs -r ubi1:misc_ro`), so the address
-				 * below is a raw offset into a filesystem, not a
-				 * stable hardware location. It is valid only while
-				 * UBI's PEB mapping and the UBIFS node layout stay
-				 * put. In practice they do -- the volume is mounted
-				 * read-only and never rewritten -- but a UBI scrub
-				 * after a bit-flip could relocate it. The MAC
-				 * currently lives in PEB 8 (vol 0, LEB 20) at LEB
-				 * offset 0x12830.
-				 *
-				 * If this ever reads back garbage, the robust
-				 * alternative is to attach the UBI device and read
-				 * the file out of the mounted UBIFS, as stock does.
-				 */
-				nvmem-layout {
-					compatible = "fixed-layout";
-					#address-cells = <1>;
-					#size-cells = <1>;
-
-					hw_mac_addr: hw_mac_addr@113830 {
-						#nvmem-cell-cells = <1>;
-						compatible = "mac-base";
-						reg = <0x113830 0x6>;
-					};
-				};
+				/* Read records by filename through read-only UBIFS, not raw offsets. */
 			};
 
 			partition@c40000 {

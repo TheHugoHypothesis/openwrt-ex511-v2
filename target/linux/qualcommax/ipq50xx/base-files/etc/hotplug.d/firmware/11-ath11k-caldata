@@ -4,12 +4,8 @@
 
 . /lib/functions/caldata.sh
 
-# tplink,ex511-v2: 0:ART ships fully erased (verified 100% 0xFF). Stock reads
-# ART, fails to LZMA-decompress it, and falls back to a zero-filled dummy
-# (see /lib/read_caldata_to_fs.sh in the stock rootfs), so the radios run on
-# board-data defaults. ath11k hard-fails if the cal file is simply absent, so
-# provide the same zero-filled dummy stock ends up with. Do NOT synthesise one
-# from the board data blob -- that loads but breaks scanning.
+# EX511 keeps the upstream integrated-radio fallback. Its external radio
+# uses this unit's validated factory EEPROM and matching private stock BDF.
 
 board=$(board_name)
 
@@ -217,7 +213,11 @@ case "$FIRMWARE" in
 		ath11k_set_macflag
 		;;
 	tplink,ex511-v2)
-		dd if=/dev/zero of=/lib/firmware/$FIRMWARE bs=4096 count=32 2>/dev/null
+		. /lib/upgrade/nand.sh
+		. /lib/functions/ex511-v2.sh
+		. /lib/functions/ex511-v2-wifi.sh
+		ex511_v2_with_factory ex511_v2_prepare_5g_cal "/lib/firmware/$FIRMWARE" || \
+			caldata_die "EX511 5 GHz factory calibration or matching local BDF provisioning failed"
 		;;
 	wallys,dr5018s)
 		caldata_extract "0:ART" 0x26800 0x20000

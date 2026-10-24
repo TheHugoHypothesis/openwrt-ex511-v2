@@ -169,6 +169,29 @@ json_cleanup() { :; }
         for key, value in expected.items():
             assert result.get(key) == value, (board, key, result.get(key), value)
 
+    # EX511 with its actual Realtek driver bound takes the generic DSA
+    # branch before the legacy flat-AP board table. Prove this without a
+    # QCA8K fixture masking a failure to recognize the Realtek driver.
+    qca_device = mdio / '90000.mdio-1:11'
+    qca_device.unlink()
+    realtek = tmp / 'mdio' / 'rtl8365mb-mdio'
+    realtek.mkdir()
+    realtek_device = realtek / '90000.mdio-1:1d'
+    realtek_device.touch()
+    ex511_dsa = dict(b3000, **{
+        'network.@device[0].ports': 'lan1 lan2 lan3 lan4',
+        'network.wan.proto': 'dhcp', 'network.wan6.proto': 'dhcpv6',
+    })
+    r = run_dsa('tplink,ex511-v2', ex511_dsa)
+    check(r, {'nss.general.topology': 'dsa',
+              'network.@device[0].ports': 'lan1 lan2 lan3 lan4',
+              'network.wan.device': 'wan', 'network.wan.proto': 'dhcp',
+              'network.wan6.device': 'wan', 'network.wan6.proto': 'dhcpv6'},
+          'ex511 bound Realtek DSA')
+    assert not any(k.startswith('network.port_') for k in r)
+    realtek_device.unlink()
+    qca_device.touch()
+
     # Fresh RA74: both CPU links, WAN on GMAC0, the wan conduit section follows.
     r = run('xiaomi,redmi-ax5400', ra74)
     check(r, {
@@ -454,6 +477,6 @@ json_cleanup() { :; }
 print('PASS: RA74 and Cudy P5 dual link, rerun, Wi-Fi choice kept, tagged WAN, '
       'no wan6, migrated config, B3000 MAC clone, D50 LAN-only trunk, RG-MA3063, '
       'WAX630E keeps br-lan, '
-      'EX511 headerless switch, dsa conduit consolidation (AX5400 fresh from board.json, '
+      'EX511 legacy fallback and bound-Realtek DSA selection, dsa conduit consolidation (AX5400 fresh from board.json, '
       'existing wan section, uci override, LuCI sections, B3000, even split), '
       'Wi-Fi offload on with firmware memory mode 1, AN8855 picks dsa')

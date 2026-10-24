@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+#include "ipq5018-tplink-ex511-v2.dts"
+
+/* Diagnostic RAM rootfs only. This is not a stock installation image. */
+/ {
+	chosen {
+		bootargs-append = " swiotlb=1 coherent_pool=512K";
+	};
+};
+
+/* The other eleven partitions are already read-only in the base DTS. */
+&ex511_partitions {
+	partition@100000 { read-only; };
+	partition@140000 { read-only; };
+	partition@300000 { read-only; };
+	partition@c40000 { read-only; };
+	partition@1240000 { read-only; };
+	partition@36a0000 { read-only; };
+};

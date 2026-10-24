@@ -518,9 +518,42 @@ define Device/tplink_ex511-v2
 	NAND_SIZE := 128m
 	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
 		ipq-wifi-tplink_ex511-v2 \
-		kmod-dsa-rtl8365mb
+		kmod-dsa-rtl8365mb ex511-v2-factory
 endef
 TARGET_DEVICES += tplink_ex511-v2
+
+define Device/tplink_ex511-v2-initramfs-test
+	$(call Device/tplink_ex511-v2)
+	DEVICE_VARIANT := v2 initramfs test (read-only NAND)
+	SUPPORTED_DEVICES := tplink,ex511-v2
+	DEVICE_DTS := ipq5018-tplink-ex511-v2-initramfs-test
+	# Never produce a persistent installation image for this profile.
+	IMAGES :=
+endef
+TARGET_DEVICES += tplink_ex511-v2-initramfs-test
+
+define Device/tplink_ex511-v2-slot1
+	$(call Device/tplink_ex511-v2)
+	DEVICE_VARIANT := v2 physical slot 1 (stock slot 0 protected)
+	DEVICE_DTS := ipq5018-tplink-ex511-v2-slot1
+	SUPPORTED_DEVICES := tplink,ex511-v2 tplink,ex511-v2-slot1
+	DEVICE_COMPAT_VERSION := 2.0
+	DEVICE_COMPAT_MESSAGE := Requires the EX511 physical-slot-1 layout and tp_boot_idx=1; not a stock web installer.
+	IMAGES += factory.ubi
+	IMAGE/factory.ubi := append-ubi
+endef
+TARGET_DEVICES += tplink_ex511-v2-slot1
+
+define Device/tplink_ex511-v2-slot1-env
+	$(call Device/tplink_ex511-v2-slot1)
+	DEVICE_VARIANT := v2 physical slot 1 (owner boot-policy control)
+	DEVICE_DTS := ipq5018-tplink-ex511-v2-slot1-env
+	# Keep the archive identity understood by the installed 2.0 slot1 updater.
+	BOARD_NAME := tplink_ex511-v2-slot1
+	SUPPORTED_DEVICES += tplink,ex511-v2-slot1-env
+	DEVICE_COMPAT_MESSAGE := Owner slot1 layout with writable APPSBLENV; boot policy changes require the guarded host tool.
+endef
+TARGET_DEVICES += tplink_ex511-v2-slot1-env
 
 define Device/wallys_dr5018s
 	$(call Device/FitImage)

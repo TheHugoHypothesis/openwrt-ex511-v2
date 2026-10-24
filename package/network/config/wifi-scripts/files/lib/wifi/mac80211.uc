@@ -139,6 +139,11 @@ set ${si}.key='${defaults?.key || ""}'
 set ${si}.disabled='${defaults ? 0 : 1}'
 
 `);
+		// Optional board-derived allocation base; existing configured radios
+		// were skipped above, so explicit user configuration is preserved.
+		if (type(phy.macaddr_base) == "string" &&
+		    match(phy.macaddr_base, /^[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}$/))
+			print(`set ${s}.macaddr_base='${phy.macaddr_base}'\n`);
 		config[name] = {};
 		commit = true;
 	}
