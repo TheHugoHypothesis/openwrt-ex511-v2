@@ -27,8 +27,9 @@ nova imagem de firmware testada.
 5. [Resultados e limitações dos testes](docs/ex511-v2/results.md).
 6. [Rede atual, IPv6 e desempenho](docs/ex511-v2/network-operation.md).
 
-Não há imagem binária pronta nesta publicação: o build utiliza dados de
-placa regionais/FEM cuja redistribuição não foi estabelecida. Use os dados
+A publicação de documentação não inclui firmware privado. Os [builds públicos
+de teste por CI](docs/ex511-v2/public-builds.md), quando disponíveis, excluem
+o BDF regional/FEM privado; o 5 GHz exige provisionamento local compatível. Use os dados
 do seu aparelho, mantenha backups privados e não use firmware do AX55.
 
 ## UART e recuperação

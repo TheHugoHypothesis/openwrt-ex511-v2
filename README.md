@@ -41,9 +41,10 @@ results belong to which image; the long Wi-Fi test used an earlier image.
    or a generic upstream EX511 sysupgrade for the dedicated slot1 profiles.
 
 **Root access is a prerequisite, not provided by this project.** An admin
-login is not proof of UID 0. No stock web-interface exploit, shared password,
-universal root unlock, signed stock installer or ready-to-flash binary is
-published here. Private regional/FEM board data must be obtained and checked
+login is not proof of UID 0. No stock web-interface exploit, shared password, universal root unlock or
+signed stock installer is provided. Public CI test builds, when available,
+follow the [public-build policy](docs/ex511-v2/public-builds.md) and exclude
+private regional/FEM provisioning. Private regional/FEM board data must be obtained and checked
 for the reader's own device. Firmware/BDF redistribution rights are unresolved.
 
 **Without UART input does not mean without risk.** RX input did not work on

@@ -1,0 +1,134 @@
+name: EX511 reproducible public test build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ex511-public-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    env:
+      GIT_HTTP_LOW_SPEED_LIMIT: '1000'
+      GIT_HTTP_LOW_SPEED_TIME: '60'
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: 3G
+    steps:
+      - name: Checkout immutable workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare hosted runner
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex gawk gettext git libncurses-dev \
+            libssl-dev libelf-dev python3 python3-setuptools python3-pexpect rsync swig \
+            unzip file wget curl zlib1g-dev perl time patch xz-utils zstd jq qemu-user-static
+          CI_OUTPUT="$RUNNER_TEMP/ex511-public-release"
+          printf 'CI_OUTPUT=%s\n' "$CI_OUTPUT" >> "$GITHUB_ENV"
+          mkdir -p "$CI_OUTPUT"
+          dpkg-query -W > "$CI_OUTPUT/host-packages.txt"
+          printf 'SOURCE_DATE_EPOCH=%s\n' "$(git show -s --format=%ct HEAD)" >> "$GITHUB_ENV"
+          df -h /
+      - name: Restore verified source downloads and compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            dl
+            .ccache
+          key: ex511-public-v1-${{ runner.os }}-${{ hashFiles('feeds.conf.default', 'include/kernel-6.18', 'toolchain/**') }}-${{ github.run_id }}
+          restore-keys: |
+            ex511-public-v1-${{ runner.os }}-${{ hashFiles('feeds.conf.default', 'include/kernel-6.18', 'toolchain/**') }}-
+      - name: Fetch pinned feeds
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          test ! -e files
+          ./scripts/feeds update -a 2>&1 | tee "$CI_OUTPUT/feeds.log"
+          ./scripts/feeds install -a 2>&1 | tee -a "$CI_OUTPUT/feeds.log"
+      - name: Configure three public profiles without a private overlay
+        run: |
+          set -euo pipefail
+          python3 .github/ci/ex511/public-build.py prepare --output "$CI_OUTPUT" 2>&1 | tee "$CI_OUTPUT/configure.log"
+          python3 scripts/ex511-v2/check-documentation.py
+          python3 scripts/ex511-v2/test-ssh-preflight.py
+          python3 scripts/ex511-v2/test-factory-mac.py
+          python3 scripts/ex511-v2/test-wifi-caldata.py
+      - name: Download hash-verified build inputs
+        timeout-minutes: 75
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if timeout --kill-after=60 20m make download -j4 2>&1 | tee "$CI_OUTPUT/download-$attempt.log"; then
+              python3 .github/ci/ex511/public-build.py licenses --output "$CI_OUTPUT"
+              exit 0
+            fi
+          done
+          exit 1
+      - name: Compile toolchain, kernel, packages and all three images
+        timeout-minutes: 240
+        run: |
+          set -euo pipefail
+          if ! make -j"$(nproc)" V=s 2>&1 | tee "$CI_OUTPUT/build.log"; then
+            printf 'Parallel build failed; retrying serially for a conclusive result.\n' | tee "$CI_OUTPUT/serial-retry.txt"
+            make -j1 V=s 2>&1 | tee "$CI_OUTPUT/build-serial.log"
+          fi
+      - name: Validate actual images and guard against private data
+        run: |
+          set -euo pipefail
+          python3 scripts/ex511-v2/test-slot1-upgrade.py --host-tools staging_dir/host
+          python3 scripts/ex511-v2/test-boot-policy.py --packaged-rootfs build_dir/target-aarch64_cortex-a53_musl/root-qualcommax
+          python3 .github/ci/ex511/public-build.py validate --output "$CI_OUTPUT" 2>&1 | tee "$CI_OUTPUT/validation.log"
+      - name: Package images, matching APKs, notices and corresponding sources
+        run: |
+          set -euo pipefail
+          python3 .github/ci/ex511/public-build.py package --output "$CI_OUTPUT"
+          cp "$CI_OUTPUT/host-packages.txt" "$CI_OUTPUT/assets/host-packages.txt"
+          cd "$CI_OUTPUT/assets"
+          sha256sum $(find . -maxdepth 1 -type f ! -name sha256sums -printf '%f\n' | sort) > sha256sums
+          du -h .
+      - name: Publish only validated experimental assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s "$CI_OUTPUT/VALIDATED"
+          tag="ex511-v2-test-$(date -u +%Y.%m.%d)-${GITHUB_SHA:0:12}-${GITHUB_RUN_NUMBER}"
+          {
+            echo '# Experimental EX511 V2 public test build'
+            echo
+            echo "Built by [GitHub Actions](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) from \`${GITHUB_SHA}\`."
+            echo 'Source and feeds are pinned; complete configs, manifests, validation results, matching APKs, source bundles and SHA256 checksums are attached.'
+            echo
+            echo '**No hardware functionality is claimed for these newly compiled binaries.** Start with the read-only diagnostic profile and the documented preflight/recovery checks.'
+            echo '**No private regional/FEM BDF or factory data is included. The external 5 GHz radio requires local matching provisioning; its calibration guard is not bypassed.** Use Ethernet for initial access.'
+            echo 'The protected slot1 images preserve stock slot0; the explicit env-control profile additionally permits guarded boot-policy writes. These are not signed stock-web installers and are not interchangeable with generic EX511 images.'
+            echo 'Do not use sysupgrade -F or mix rolling-snapshot kernel modules. Rolling package feeds are disabled; use the matching package bundle.'
+            echo
+            echo "[Installation guide](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/ex511-v2/installation-ssh.md) · [Public-build limitations](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/ex511-v2/public-builds.md)"
+          } > "$CI_OUTPUT/release-notes.md"
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease \
+            --title "EX511 V2 public test build ${GITHUB_SHA:0:12}" --notes-file "$CI_OUTPUT/release-notes.md"
+          gh release upload "$tag" "$CI_OUTPUT/assets/"* --repo "$GITHUB_REPOSITORY"
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease
+          printf 'Published https://github.com/%s/releases/tag/%s\n' "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain diagnostic logs even on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ex511-build-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/ex511-public-release/*.log
+            ${{ runner.temp }}/ex511-public-release/*.config
+            ${{ runner.temp }}/ex511-public-release/*.json
+            ${{ runner.temp }}/ex511-public-release/host-packages.txt
+          if-no-files-found: warn
+          retention-days: 3

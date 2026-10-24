@@ -18,6 +18,8 @@ silently rewritten as if later results had already existed.
 
 [Source snapshot and historical build identifiers](source-provenance.md).
 
+[Public CI build policy and limitations](public-builds.md).
+
 ## Source and build evidence
 
 - [Original NSS/factory-data integration](nss-baseline.md), historical source comparison.
