@@ -1,99 +1,90 @@
-# OpenWrt with NSS hardware offload for IPQ50xx (IPQ5018)
+# TP-Link EX511 V2 — OpenWrt with NSS
 
-This is OpenWrt main with Qualcomm NSS hardware offload for IPQ5018
-routers. The NSS firmware runs on top of the upstream `stmmac` ethernet
-driver on kernel 6.18, and the switch keeps its DSA driver. It does not use
-the out-of-tree `qca-nss-dp` and `qca-ssdk` drivers.
+[Português](README.pt-BR.md) · [Documentation](docs/ex511-v2/README.md) ·
+[Install through stock root SSH](docs/ex511-v2/installation-ssh.md) ·
+[Test results](docs/ex511-v2/results.md) · [Recovery](docs/ex511-v2/recovery.md)
 
-Offloaded: IPv4 NAT and routing through ECM, PPPoE, 802.1Q VLAN and
-VLAN-aware bridges, the NSS qdiscs for SQM, and ath11k Wi-Fi offload. It is
-validated on the GL.iNet GL-B3000 and the TP-Link Archer AX55 v1, and users
-run it on more IPQ5018 boards.
+An unofficial EX511 V2 development port and a documented **installation
+through an already available stock root SSH shell, without UART input**.
+One owner device has been installed, upgraded, cold-started and used as a
+PPPoE/IPv6 gateway with both Wi-Fi bands. This is not an official OpenWrt
+stable release or a universal installer for every EX511 firmware revision.
 
-Everything else is in **[README.ipq50xx.md](README.ipq50xx.md)**: what the
-commits are, how to build, how the plane comes up, the two topologies, the
-support matrix, the boards, and how to port another IPQ5018 board.
+## What is working on the tested device
 
-- Prebuilt images are on the
-  [Releases page](https://github.com/kuncy7/openwrt-nss-edma/releases).
-- The NSS packages (driver, ECM, qdiscs, firmware) are in the
-  [kuncy7/nss-packages](https://github.com/kuncy7/nss-packages/tree/ipq50xx-rebase)
-  feed, branch `ipq50xx-rebase`. `feeds.conf.default` already names it.
-- Discussion and test reports are in the
-  [forum thread](https://forum.openwrt.org/t/ipq5018-nss-offload-on-kernel-6-18-with-the-upstream-ethernet-stack-gl-b3000/253014).
+| Area | Evidence |
+| --- | --- |
+| Persistent installation | SquashFS + UBIFS in physical `rootfs_1`; stock `rootfs` preserved |
+| Boot selection | OpenWrt saved as default; SSH selection of stock/OpenWrt tested |
+| Ethernet | Four LAN jacks tested earlier; routed WAN and current downstream traffic pass |
+| Wi-Fi | Both bands pass traffic; approximately 14-minute single-client 5 GHz integrity test |
+| NSS | Wired/Wi-Fi acceleration observed; active IPv4/IPv6 ECM connections on the current gateway |
+| PPPoE / IPv6 | Actual ISP PPPoE, native DHCPv6-PD /64 and downstream downstream router IPv6 relay pass |
+| Factory data | Read-only UBIFS file lookup for MAC/calibration, avoiding physical UBIFS offsets |
+| Recovery | Button-triggered failsafe SSH and bootloader recovery HTTP entry tested; recovery upload **not tested** |
 
-## Where this tree comes from
+Installed firmware: **Linux 6.18.55**, OpenWrt **SNAPSHOT
+r0+37938-ff5b0529bb8**. The firmware build commit is
+[`ff5b0529bb8`](docs/ex511-v2/source-provenance.md).
+Later documentation/workstation-tool commits are not a new hardware-tested
+firmware binary. See the [evidence matrix](docs/ex511-v2/results.md) for which
+results belong to which image; the long Wi-Fi test used an earlier image.
 
-The tree is a fork of Julius Bairaktaris's `nss-edma-rework`: OpenWrt main
-with the vendor NSS stack (`qca-nss-drv`, ECM, the NSS qdiscs, ath11k
-offload) on the upstream `qca_edma` and `qca_ppe` drivers of IPQ807x and
-IPQ60xx. The IPQ5018 port is layered on it. The idea is the same, the
-ethernet driver and the glue module are different.
+## Start here
 
-In October 2026 that project became
-[PPE-NSS](https://github.com/JuliusBairaktaris/openwrt-ppe-nss): NSS offload
-without the vendor stack, with the wired traffic in the hardware PPE. Its
-vendor-stack line is archived. IPQ5018 has no PPE, and its wired
-acceleration is the NSS firmware itself, so this branch stays on the vendor
-stack and carries that line by itself from here on. There is no upstream of
-it left to sync with. The base is `nss-edma-rework` as it was archived under
-the `vendor-nss-archive` tag, which sits on OpenWrt main of 9 October 2026.
+1. Read [hardware and UART findings](docs/ex511-v2/hardware.md), then
+   [recovery limits](docs/ex511-v2/recovery.md).
+2. Check the strict stock-layout/root-access prerequisites in the
+   [SSH installation guide](docs/ex511-v2/installation-ssh.md).
+3. [Build and validate your own images](docs/ex511-v2/build-current.md).
+4. Follow the staged installation. Do not substitute AX55 images, MTD numbers
+   or a generic upstream EX511 sysupgrade for the dedicated slot1 profiles.
 
-The IPQ807x and IPQ60xx parts of that line are still in the tree as they
-were, but nothing here builds or tests them. For those SoCs use
-[openwrt-ppe-nss](https://github.com/JuliusBairaktaris/openwrt-ppe-nss).
+**Root access is a prerequisite, not provided by this project.** An admin
+login is not proof of UID 0. No stock web-interface exploit, shared password,
+universal root unlock, signed stock installer or ready-to-flash binary is
+published here. Private regional/FEM board data must be obtained and checked
+for the reader's own device. Firmware/BDF redistribution rights are unresolved.
 
-## Branches
+**Without UART input does not mean without risk.** RX input did not work on
+the tested EX511. An interrupted RX trace is a hypothesis, not a physically
+confirmed EX511 defect. The AX55 wiki describes such a gap on that model;
+it is not an EX511 soldering guide. The installation retained receive-only
+UART logs, so a completely unopened, unmonitored installation was not separately
+validated. There is no automatic rollback for an arbitrary kernel hang.
 
-| Branch | What |
-|---|---|
-| `c3po-tag-8021q` | The default branch. Pull requests go here. |
-| `ipq50xx-rebase` | Frozen on 2026-09-17. It proved that the offload works with the upstream ethernet driver. |
-| `ipq50xx-nss` | Archive of the series before the rebase. |
-| `julius-archive/vendor-nss-archive` | The base of the default branch: `nss-edma-rework` at its `vendor-nss-archive` tag. |
-| `julius-archive/nss-edma-rework` | The final state of `nss-edma-rework`, with its archive notice. |
-| `julius-archive/nss-edma-7.3-vendor-20261011` | The vendor stack with the 7.3 testing kernel. |
+## Current tested deployment
 
-The feed has the matching branches (`julius-archive/vendor-nss-archive`,
-`julius-archive/edma-nss`, `julius-archive/edma-nss-7.3-feed-20261011`) and
-a copy of the pinned source archives in its `nss-source-tarballs` release.
-[kuncy7/mac80211-nss-staging](https://github.com/kuncy7/mac80211-nss-staging)
-is a fork of the repository the mac80211 NSS patch series was exported
-from. The `julius-archive` branches are kept as they were and take no
-changes.
-
-## Building
-
-```sh
-git clone https://github.com/kuncy7/openwrt-nss-edma.git
-cd openwrt-nss-edma
-./scripts/feeds update -a && ./scripts/feeds install -a
-make menuconfig   # qualcommax/ipq50xx, nss-tools-dwmac as <*>
-make -j$(nproc)
+```text
+ISP bridge -> EX511 WAN: PPPoE + native IPv6 /64
+                 EX511 LAN / Wi-Fi: $GATEWAY_NETWORK/24
+                    `-> downstream router WAN: DHCP
+                         downstream router main clients: $DOWNSTREAM_NETWORK/24
+                         IPv6: RA + DHCPv6 + NDP relay
 ```
 
-The *Quick start* section of [README.ipq50xx.md](README.ipq50xx.md) has the
-details and the checks worth doing on a fresh image.
+The operator-specific [deployment report](docs/ex511-v2/post-cutover-cleanup.md)
+is evidence, not a configuration everyone should import. Requests for /56
+and /60 still returned /64 with the same DHCPv6 identity. See
+[network operation and tuning](docs/ex511-v2/network-operation.md).
 
-## Acknowledgements
+## Credits and scope of this fork
 
-- [Julius Bairaktaris](https://github.com/JuliusBairaktaris) for the tree
-  this is layered on, and for the idea of running NSS on the upstream
-  drivers. His work can be supported through
-  [GitHub Sponsors](https://github.com/sponsors/JuliusBairaktaris) or
-  [PayPal](https://paypal.me/JuliusBairaktaris).
-- [George Moussalem](https://github.com/georgemoussalem) for the ipq50xx
-  target and the upstream stmmac and uniphy conversion.
-- [Robert Marko (robimarko)](https://github.com/robimarko) for maintaining the
-  OpenWrt qualcommax target.
-- [qosmio](https://github.com/qosmio/openwrt-ipq) for the NSS packaging and
-  firmware tarballs the feed builds on.
-- Qualcomm and CodeLinaro for the open-source NSS host components.
+This work builds on [fl1ck3r's original EX511 port](https://github.com/fl1ck3r/openwrt/tree/tplink-ex511-v2),
+[gusfm's EX511 work](https://github.com/gusfm/openwrt-nss-edma),
+[kuncy7's IPQ5018 NSS integration](https://github.com/kuncy7/openwrt-nss-edma),
+Julius Bairaktaris's NSS work, George Moussalem's upstream IPQ5018/ath11k
+work, and the wider OpenWrt/Linux communities. Ethernet and NSS were not
+invented in this fork. Our additions include factory-data validation,
+protected slot1 image profiles, reviewed SSH boot-policy control and the
+owner's installation/recovery/traffic validation.
 
-The people who tested, reported and contributed boards are named in
-[README.ipq50xx.md](README.ipq50xx.md).
+See [attribution and provenance](docs/ex511-v2/credits.md). The inherited NSS
+README is preserved as [README.nss-upstream.md](README.nss-upstream.md), and
+[README.ipq50xx.md](README.ipq50xx.md) remains the upstream technical reference.
+Its board-specific claims do not replace this fork's test reports.
 
-## License
-
-GPL-2.0, see [LICENSE](LICENSE). The NSS components keep their upstream
-licenses.
+The default branch is `ex511-v2`. EX511 changes are maintained as incremental commits on the upstream NSS
+base; private session branches are not part of the maintained contribution.
+The source tree retains its existing component licenses; this is not a
+relicensing of OpenWrt or Qualcomm/TP-Link firmware.

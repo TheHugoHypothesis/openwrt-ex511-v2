@@ -1,0 +1,21 @@
+name: EX511 source checks
+on:
+  push:
+    branches: [ex511-v2]
+    paths: ['README*', 'docs/ex511-v2/**', 'scripts/ex511-v2/**', 'target/linux/qualcommax/**', '.github/workflows/ex511-checks.yml']
+  pull_request:
+    paths: ['README*', 'docs/ex511-v2/**', 'scripts/ex511-v2/**', 'target/linux/qualcommax/**', '.github/workflows/ex511-checks.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/ex511-v2/check-documentation.py
+      - run: python3 scripts/ex511-v2/test-ssh-preflight.py
+      - run: python3 scripts/ex511-v2/test-factory-mac.py
+      - run: python3 scripts/ex511-v2/test-wifi-caldata.py

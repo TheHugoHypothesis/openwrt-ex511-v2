@@ -1,15 +1,11 @@
----
 blank_issues_enabled: false
 contact_links:
-  - name: GL-B3000 release image
-    url: https://github.com/kuncy7/openwrt-nss-edma/releases/latest
-    about: The one board with a published image. Reproduce on it before filing if you have that board — a self-built image carries a config nobody else has.
-  - name: The bug also happens on an official OpenWrt image
-    url: https://github.com/openwrt/openwrt/issues/new/choose
-    about: Then it is not this fork's bug. Report it to OpenWrt itself — this tracker only covers what the NSS offload path adds on top.
-  - name: Help, configuration and general questions
-    url: https://forum.openwrt.org/t/ipq5018-nss-offload-on-kernel-6-18-with-the-upstream-ethernet-stack-gl-b3000/253014
-    about: The forum thread for IPQ5018 NSS on this tree. Questions answered there stay findable for the next person.
-  - name: Board status, porting and known limitations
-    url: https://github.com/kuncy7/openwrt-nss-edma/blob/ipq50xx-rebase/README.ipq50xx.md
-    about: Which boards have been run, how the plane comes up, the uci knobs, and what is not carried for IPQ5018.
+  - name: EX511 V2 installation and recovery guide
+    url: https://github.com/TheHugoHypothesis/openwrt-ex511-v2/blob/ex511-v2/docs/ex511-v2/README.md
+    about: Start with the stock root SSH prerequisites, exact layout and recovery limits. No universal stock root unlock or binary image is provided.
+  - name: Original EX511 hardware/community discussion
+    url: https://forum.openwrt.org/t/request-for-support-for-tp-link-ex511-v2-router-archer-ax3000/207188
+    about: Hardware variants and original community porting work.
+  - name: IPQ5018 NSS upstream integration
+    url: https://github.com/kuncy7/openwrt-nss-edma
+    about: The inherited Ethernet/NSS base; this fork's installation and factory-data changes are separate.
