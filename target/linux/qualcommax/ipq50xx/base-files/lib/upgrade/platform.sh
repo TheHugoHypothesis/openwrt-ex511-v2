@@ -391,7 +391,23 @@ platform_do_upgrade() {
 		fi
 		nand_do_upgrade_success
 		;;
+    tplink,mx515v-v1)
+		# rootfs_1 (mtd18) is kept as a stock-firmware fallback and must
+		# never be written by sysupgrade. Unlike archer-ax55-v1/
+		# eap650-outdoor-v1/re700x there is no ping-pong on tp_boot_idx:
+		# every upgrade goes to rootfs (mtd17).
+		CI_UBIPART="rootfs"
+		fw_setenv tp_boot_idx 0 || {
+			echo "failed to set tp_boot_idx 0"
+			return 1
+		}
+		remove_oem_ubi_volume bt_fw
+		remove_oem_ubi_volume ubi_rootfs
+		remove_oem_ubi_volume kernel
+		nand_do_upgrade "$1"
+		;;
 	tplink,archer-ax55-v1|\
+	tplink,archer-ax58-v2|\
 	tplink,eap650-outdoor-v1|\
 	tplink,re700x)
 		# Dual boot: install into the inactive rootfs/rootfs_1 slot,

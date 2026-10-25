@@ -88,7 +88,8 @@ case "$FIRMWARE" in
 		ath11k_patch_mac $(mtd_get_mac_binary 0:mfgdata 0x6) 0
 		ath11k_set_macflag
 		;;
-	tplink,archer-ax55-v1)
+	tplink,archer-ax55-v1|\
+	tplink,archer-ax58-v2)
 		caldata_extract "0:ART" 0x1000 0x20000
 		label_mac=$(get_mac_binary "/tmp/tp_data/default-mac" 0)
 		[ -n "$label_mac" ] && ath11k_patch_mac "$(macaddr_add "$label_mac" 2)" 0
@@ -100,6 +101,13 @@ case "$FIRMWARE" in
 		label_mac=$(get_mac_binary /tmp/factory_data/default-mac 0)
 		ath11k_patch_mac $label_mac 0
 		ath11k_set_macflag
+		;;
+	tplink,mx515v-v1)
+		caldata_from_file "/tmp/misc_ro/0x04380000" 0 0x20000
+		label_mac=$(get_mac_binary /tmp/misc_ro/0x0434F100 0)
+		[ -n "$label_mac" ] && ath11k_patch_mac "$label_mac" 0
+		ath11k_set_macflag
+		ath11k_remove_regdomain
 		;;
 	tplink,re700x)
 		caldata_extract "0:art" 0x1000 0x20000
@@ -199,7 +207,8 @@ case "$FIRMWARE" in
 		ath11k_patch_mac $(macaddr_add $(mtd_get_mac_binary 0:mfgdata 0x6) 64) 0
 		ath11k_set_macflag
 		;;
-	tplink,archer-ax55-v1)
+	tplink,archer-ax55-v1|\
+	tplink,archer-ax58-v2)
 		caldata_extract "0:ART" 0x26800 0x20000
 		label_mac=$(get_mac_binary "/tmp/tp_data/default-mac" 0)
 		[ -n "$label_mac" ] && ath11k_patch_mac "$(macaddr_add "$label_mac" 3)" 0
@@ -218,6 +227,13 @@ case "$FIRMWARE" in
 		. /lib/functions/ex511-v2-wifi.sh
 		ex511_v2_with_factory ex511_v2_prepare_5g_cal "/lib/firmware/$FIRMWARE" || \
 			caldata_die "EX511 5 GHz factory calibration or matching local BDF provisioning failed"
+		;;
+	tplink,mx515v-v1)
+		caldata_from_file "/tmp/misc_ro/0x043A0000" 0 0x20000
+		label_mac=$(get_mac_binary /tmp/misc_ro/0x0434F100 0)
+		[ -n "$label_mac" ] && ath11k_patch_mac "$(macaddr_add "$label_mac" 2)" 0
+		ath11k_set_macflag
+		ath11k_remove_regdomain
 		;;
 	wallys,dr5018s)
 		caldata_extract "0:ART" 0x26800 0x20000

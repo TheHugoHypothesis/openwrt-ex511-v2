@@ -169,10 +169,6 @@
 	nvmem-cell-names = "mac-address";
 };
 
-&ge_phy {
-	qcom,dac-preset-short-cable;
-};
-
 &gmac1 {
 	status = "okay";
 

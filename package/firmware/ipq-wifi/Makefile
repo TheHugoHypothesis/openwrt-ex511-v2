@@ -105,6 +105,7 @@ ALLWIFIBOARDS:= \
 	spectrum_sax1v1k \
 	tcl_linkhub-hh500v \
 	tplink_archer-ax55-v1 \
+	tplink_archer-ax58-v2 \
 	tplink_archer-c59-v1 \
 	tplink_archer-c6-v2 \
 	tplink_archer-c60-v1 \
@@ -121,6 +122,7 @@ ALLWIFIBOARDS:= \
 	tplink_eap650-outdoor-v1 \
 	tplink_eap660hd-v1 \
 	tplink_ex511-v2 \
+	tplink_mx515v-v1 \
 	tplink_re700x \
 	tplink_tl-wa1201-v2 \
 	ubnt_utr \
@@ -323,6 +325,7 @@ $(eval $(call generate-ipq-wifi-package,skspruce_wia3300-20,SKSpruce WIA3300-20)
 $(eval $(call generate-ipq-wifi-package,spectrum_sax1v1k,Spectrum SAX1V1K))
 $(eval $(call generate-ipq-wifi-package,tcl_linkhub-hh500v,TCL LINKHUB HH500V))
 $(eval $(call generate-ipq-wifi-package,tplink_archer-ax55-v1,TP-Link Archer AX55 v1))
+$(eval $(call generate-ipq-wifi-package,tplink_archer-ax58-v2,TP-Link Archer AX58 v2))
 $(eval $(call generate-ipq-wifi-package,tplink_archer-c59-v1,TP-Link Archer C59 V1))
 $(eval $(call generate-ipq-wifi-package,tplink_archer-c6-v2,TP-Link Archer C6 V2))
 $(eval $(call generate-ipq-wifi-package,tplink_archer-c60-v1,TP-Link Archer C60 V1))
@@ -339,6 +342,7 @@ $(eval $(call generate-ipq-wifi-package,tplink_eap625-outdoor-hd-v1,TP-Link EAP6
 $(eval $(call generate-ipq-wifi-package,tplink_eap650-outdoor-v1,TP-Link EAP650-Outdoor v1))
 $(eval $(call generate-ipq-wifi-package,tplink_eap660hd-v1,TP-Link EAP660 HD v1))
 $(eval $(call generate-ipq-wifi-package,tplink_ex511-v2,TP-Link EX511 v2))
+$(eval $(call generate-ipq-wifi-package,tplink_mx515v-v1,TP-Link MX515v))
 $(eval $(call generate-ipq-wifi-package,tplink_re700x,TP-Link RE700X))
 $(eval $(call generate-ipq-wifi-package,tplink_tl-wa1201-v2,TP-Link TL-WA1201 V2))
 $(eval $(call generate-ipq-wifi-package,ubnt_utr,Ubiquiti UniFi Travel Router))

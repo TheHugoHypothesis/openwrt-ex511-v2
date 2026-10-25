@@ -38,6 +38,18 @@ def validate_dtb(path, readonly_trial=False, slot1=False, env_control=False):
         return matches[0]
 
     assert b'tplink,ex511-v2\0' in nodes['/']['compatible']
+    # Follow the CPU's actual OPP phandle; an inherited SoC-wide boost
+    # must not silently overclock any of the protected EX511 profiles.
+    _, first_cpu = node('cpu@0')
+    opp_phandle = cells(first_cpu['operating-points-v2'])
+    opp_paths = [name for name, props in nodes.items()
+                 if 'phandle' in props and cells(props['phandle']) == opp_phandle]
+    assert len(opp_paths) == 1, opp_paths
+    frequencies = [int.from_bytes(props['opp-hz'], 'big')
+                   for name, props in nodes.items()
+                   if name.startswith(opp_paths[0] + '/') and 'opp-hz' in props
+                   and props.get('status', b'okay\0') != b'disabled\0']
+    assert frequencies == [1008000000], frequencies
     gmac_path, gmac = node('ethernet@39d00000')
     switch_path, switch = node('switch@1d')
     cpu_path, cpu = node('switch@1d/ports/port@6')

@@ -463,6 +463,30 @@ endif
 endef
 TARGET_DEVICES += tplink_archer-ax55-v1
 
+define Device/tplink_archer-ax58-v2
+	$(call Device/FitImageLzma)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := TP-Link
+	DEVICE_MODEL := Archer AX58
+	DEVICE_VARIANT := v2
+	DEVICE_DTS_CONFIG := config@mp03.3
+	SOC := ipq5018
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	IMAGE_SIZE := 43008k
+	NAND_SIZE := 128m
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
+		ipq-wifi-tplink_archer-ax58-v2 \
+		kmod-dsa-rtl8365mb
+ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
+ifeq ($(IB),)
+	ARTIFACTS := initramfs-factory.ubi
+	ARTIFACT/initramfs-factory.ubi := append-image-stage initramfs-uImage.itb | ubinize-kernel
+endif
+endif
+endef
+TARGET_DEVICES += tplink_archer-ax58-v2
+
 define Device/tplink_eap650-outdoor-v1
 	$(call Device/FitImage)
 	$(call Device/UbiFit)
@@ -554,6 +578,30 @@ define Device/tplink_ex511-v2-slot1-env
 	DEVICE_COMPAT_MESSAGE := Owner slot1 layout with writable APPSBLENV; boot policy changes require the guarded host tool.
 endef
 TARGET_DEVICES += tplink_ex511-v2-slot1-env
+define Device/tplink_mx515v-v1
+	$(call Device/FitImageLzma)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := TP-Link
+	DEVICE_MODEL := MX515v
+	DEVICE_VARIANT := v1
+	DEVICE_DTS_CONFIG := config@mp03.3
+	SOC := ipq5018
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	IMAGE_SIZE := 37248k
+	NAND_SIZE := 256m
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
+		ipq-wifi-tplink_mx515v-v1 \
+		kmod-dsa-rtl8365mb \
+		kmod-usb3
+ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
+ifeq ($(IB),)
+	ARTIFACTS := initramfs-factory.ubi
+	ARTIFACT/initramfs-factory.ubi := append-image-stage initramfs-uImage.itb | ubinize-kernel
+endif
+endif
+endef
+TARGET_DEVICES += tplink_mx515v-v1
 
 define Device/wallys_dr5018s
 	$(call Device/FitImage)

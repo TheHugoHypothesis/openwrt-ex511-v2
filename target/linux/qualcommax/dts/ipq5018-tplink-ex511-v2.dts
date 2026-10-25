@@ -721,3 +721,8 @@
 		};
 	};
 };
+
+/* Keep the rated CPU frequency; upstream 1296 MHz is untested on EX511. */
+&cpu_opp_table {
+	/delete-node/ opp-1296000000;
+};

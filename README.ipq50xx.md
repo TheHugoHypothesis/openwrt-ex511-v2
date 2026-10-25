@@ -860,10 +860,16 @@ full mesh-capable `wpad`, which the image does not carry - it keeps
 
 ```sh
 apk update
-apk add wpad-mesh-mbedtls    # replaces wpad-basic-mbedtls
+apk del wpad-basic-mbedtls && apk add wpad-mesh-mbedtls
+/etc/init.d/wpad restart && wifi
 ```
 
-A sysupgrade puts `wpad-basic-mbedtls` back: install it again afterwards (on
+The two packages conflict, so `apk add` alone refuses; remove the one, add the
+other. The running `hostapd` and `wpa_supplicant` are still the old binary
+until the service is restarted (or the board rebooted): `wifi` by itself hands
+the old supplicant a mesh it cannot parse and the whole radio stays down.
+
+A sysupgrade puts `wpad-basic-mbedtls` back: do the above again afterwards (on
 a satellite without its own WAN, copy the package over and use
 `apk add --allow-untrusted --no-network <file>`).
 
