@@ -22,6 +22,8 @@ silently rewritten as if later results had already existed.
 
 ## Source and build evidence
 
+- [25 October upstream integration](upstream-update-2026-10-25.md), reviewed fixes, EX511 adaptations and configuration preservation.
+
 - [Original NSS/factory-data integration](nss-baseline.md), historical source comparison.
 - [21 October comparison](upstream-comparison-2026-10-21.md), pinned refs, not a claim about today's latest upstream release.
 - [Original build](build.md) and [validation](validation.md), historical reproducibility logs.

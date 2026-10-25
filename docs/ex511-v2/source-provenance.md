@@ -20,3 +20,7 @@ Upstream baseline: kuncy7/openwrt-nss-edma c3po-tag-8021q, including the
 October 21 source 9caa35b4d718382ad882cb35c2372dbb569de901.
 Credits and source lineage are preserved in [credits.md](credits.md). No private
 Git bundle, original local refs or personal deployment configuration is imported.
+
+The 25 October integration advances the upstream merge base through
+865da78e2ef7caee3d6854c0b353535413d878c9 while retaining the EX511 guards.
+See the [change review and configuration boundary](upstream-update-2026-10-25.md).

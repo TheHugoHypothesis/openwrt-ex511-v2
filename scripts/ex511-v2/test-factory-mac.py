@@ -199,6 +199,22 @@ logger() { :; }
         script += '\nipq50xx_setup_macs ' + shlex.quote(board)
         return subprocess.run(SHELL + ['-c', script], text=True, capture_output=True)
 
+    def test_other_board_mount_hook_leaves_ex511_to_validated_helper(self):
+        hook = (BASE / 'lib/preinit/09_mount_misc_ro').read_text()
+        hook = hook.replace('. /lib/functions.sh', '')
+        # Fail before touching any real sysfs, UBI device or mount point.
+        for board, expected in [('tplink,ex511-v2', ''),
+                                ('glinet,gl-b3000', ''),
+                                ('tplink,mx515v-v1', 'lookup\n')]:
+            with self.subTest(board=board):
+                script = ('board_name() { echo ' + shlex.quote(board) + '; }\n'
+                          'boot_hook_add() { :; }\n'
+                          'find_mtd_index() { echo lookup >&2; return 1; }\n')
+                result = subprocess.run(SHELL + ['-c', script + hook + '\nmount_misc_ro'],
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr, expected)
+
     def test_board_lan_wan_and_label(self):
         result = self.run_board('tplink,ex511-v2', '02:11:22:33:44:50')
         self.assertEqual(result.returncode, 0, result.stderr)
